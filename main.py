@@ -251,3 +251,4 @@ print("And that was just another day in New Eden")
 # TODO Add error handling
 # TODO Add handling for when there are hundreds of attackers?
 # TODO Add support for a battle report
+# something
