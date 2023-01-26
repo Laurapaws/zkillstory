@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "zkillstory"
+version = "0.1.0"
+description = "A tool that generates an AI story about an EVE Online killmail"
+authors = ["CCP Vargur"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.28.2"
+openai = "^0.26.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
