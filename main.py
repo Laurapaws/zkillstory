@@ -10,8 +10,8 @@ handler = logging.FileHandler('debug.log')
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 root_logger.addHandler(handler)
 
-openai.api_key = 'YOUR_OPENAI_API_KEY'
-KILL_URL = 'https://zkillboard.com/kill/105988213/'
+openai.api_key = 'OPEN_AI_KEY'
+KILL_URL = 'https://zkillboard.com/kill/106361130/'
 
 class Story:
     def __init__(self, 
@@ -99,8 +99,11 @@ def populate_character(character: Character):
     character_name_response = requests.get('https://esi.evetech.net/latest/characters/' + str(character.id) + '/?datasource=tranquility')
     character.name = json.loads(character_name_response.text)['name']
     
-    character_ship_response = requests.get('https://esi.evetech.net/latest/universe/types/' + str(character.ship_id) + '/?datasource=tranquility&language=en')
-    character.ship = json.loads(character_ship_response.text)['name']
+    try:
+        character_ship_response = requests.get('https://esi.evetech.net/latest/universe/types/' + str(character.ship_id) + '/?datasource=tranquility&language=en')
+        character.ship = json.loads(character_ship_response.text)['name']
+    except:
+        character.ship = "Unknown Ship"
     
     character_corp_response = requests.get('https://esi.evetech.net/latest/corporations/' + str(character.corp_id) + '/?datasource=tranquility')
     character.corp = json.loads(character_corp_response.text)['name']
@@ -119,7 +122,10 @@ def get_attackers(esi_data: dict):
     logging.debug("Getting attackers")
     attackers = []
     for attacker in esi_data['attackers']:
-        character = Character(character_id=attacker['character_id'], corp_id=attacker['corporation_id'], ship_id=attacker['ship_type_id'])
+        try:
+            character = Character(character_id=attacker['character_id'], corp_id=attacker['corporation_id'], ship_id=attacker['ship_type_id'])
+        except:
+            character = Character(character_id=attacker['character_id'], corp_id=attacker['corporation_id'], ship_id=670)
         character = populate_character(character)
         attackers.append(character)
     logging.debug("Got attackers")
@@ -231,8 +237,17 @@ zkillstory.victim_corp = victim.corp
 
 zkillstory.top_damage, zkillstory.final_blow = find_damage_and_final_blow(zkillstory.esi_data)
 
-story = get_story(zkillstory)
+story = get_story(zkillstory, tokens=300)
 print(story)
 logging.info("Story: " + story)
 
 print("And that was just another day in New Eden")
+
+
+
+# TODO Add in extra consolidation of code into functions
+# TODO Add an extra topic if you want to customise the story
+# TODO Create a Discord bot to post the story to a channel
+# TODO Add error handling
+# TODO Add handling for when there are hundreds of attackers?
+# TODO Add support for a battle report
