@@ -2,6 +2,8 @@ import json
 import logging
 import requests
 import openai
+import os
+from dotenv import load_dotenv, find_dotenv
 
 # Set up logging
 root_logger = logging.getLogger()
@@ -10,8 +12,10 @@ handler = logging.FileHandler('debug.log')
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 root_logger.addHandler(handler)
 
-openai.api_key = 'OPEN_AI_KEY'
-KILL_URL = 'https://zkillboard.com/kill/106361130/'
+load_dotenv(find_dotenv())
+openai.api_key = os.getenv('OPENAI_SECRET')
+KILL_URL = 'https://zkillboard.com/kill/106361108/'
+
 
 class Story:
     def __init__(self, 
@@ -185,7 +189,7 @@ def find_damage_and_final_blow(esi_data: dict):
     
     return top_damage, final_blow
 
-def get_story(zkillstory, tokens=300):
+def get_story(zkillstory, tokens=300, topic="EVE Online story"):
     ai_prompt = '''Topic: {story_topic}
     Attackers: {story_attackers}
     Attacking Corporation: {story_attacking_corp}
@@ -197,7 +201,7 @@ def get_story(zkillstory, tokens=300):
     Story:'''
 
     ai_prompt = ai_prompt.format(
-        story_topic="EVE Online story",
+        story_topic=topic,
         story_attackers=zkillstory.attackers,
         story_attacking_corp=zkillstory.attacking_corp,
         story_top_damage=zkillstory.top_damage,
@@ -220,27 +224,39 @@ def get_story(zkillstory, tokens=300):
     
     return openresponse["choices"][0]["text"]
 
+def populate_story(zkillstory: Story):
+    """Populate a Story object with data from ESI and Zkill
+
+    Args:
+        zkillstory (Story): Story object
+    """
+    logging.debug("Populating story")
+    
+    zkillstory.killmail_id, zkillstory.zkill_data = get_zkill_data(zkillstory.zkill_link)
+    zkillstory.kill_hash = zkillstory.zkill_data[0]['zkb']['hash']
+    zkillstory.esi_data = get_esi_data(zkillstory.kill_hash, zkillstory.killmail_id)
+
+    attacker_list = get_attackers(zkillstory.esi_data)
+    victim = get_victim(zkillstory.esi_data)
+
+    zkillstory.attackers = create_attacker_string(attacker_list)
+    zkillstory.attacking_corp = attacker_list[0].corp
+    zkillstory.victims = create_victim_string(victim)
+    zkillstory.victim_corp = victim.corp
+
+    zkillstory.top_damage, zkillstory.final_blow = find_damage_and_final_blow(zkillstory.esi_data)
+    
+    return zkillstory
+    
+
 
 zkillstory = Story(zkill_link=KILL_URL)
+zkillstory = populate_story(zkillstory)
 
-zkillstory.killmail_id, zkillstory.zkill_data = get_zkill_data(zkillstory.zkill_link)
-zkillstory.kill_hash = zkillstory.zkill_data[0]['zkb']['hash']
-zkillstory.esi_data = get_esi_data(zkillstory.kill_hash, zkillstory.killmail_id)
 
-attacker_list = get_attackers(zkillstory.esi_data)
-victim = get_victim(zkillstory.esi_data)
-
-zkillstory.attackers = create_attacker_string(attacker_list)
-zkillstory.attacking_corp = attacker_list[0].corp
-zkillstory.victims = create_victim_string(victim)
-zkillstory.victim_corp = victim.corp
-
-zkillstory.top_damage, zkillstory.final_blow = find_damage_and_final_blow(zkillstory.esi_data)
-
-story = get_story(zkillstory, tokens=300)
-print(story)
-logging.info("Story: " + story)
-
+zkillstory.response = get_story(zkillstory, tokens=75, topic="An EVE Online story")
+print(zkillstory.response)
+logging.info("Story: " + zkillstory.response)
 print("And that was just another day in New Eden")
 
 
@@ -251,4 +267,3 @@ print("And that was just another day in New Eden")
 # TODO Add error handling
 # TODO Add handling for when there are hundreds of attackers?
 # TODO Add support for a battle report
-# something
